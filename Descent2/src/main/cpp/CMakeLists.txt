@@ -36,6 +36,7 @@ add_subdirectory(../../../../vecmat vecmat)
 
 set(SOURCES
     controls.c
+    input.c
     keyboard.c
     main.c
     motion.c

@@ -156,7 +156,11 @@ RetrySelection:
 			control_choice = Config_control_type;				// Assume keyboard
 		#endif
 	
-		#ifndef APPLE_DEMO
+		#if defined(ANDROID_NDK)
+			// The app asks for touch, keyboard and mouse or a controller at
+			// launch; all of them steer through the mouse, so there is
+			// nothing to ask here
+		#elif !defined(APPLE_DEMO)
 			control_choice = newmenu_do1( NULL, TXT_CHOOSE_INPUT, i, m, NULL, control_choice );
 		#else
 			control_choice = 0;
@@ -483,6 +487,21 @@ int read_player_file()
 		 }	
 		
                   
+		#ifdef ANDROID_NDK
+		// Pilots made before the WASD defaults move to them, unless their
+		// keys were changed: the touch controls press W, S and Left Shift
+		{
+			static const ubyte old_keyboard_defaults[MAX_CONTROLS] = {
+				0xc8,0x48,0xd0,0x50,0xcb,0x4b,0xcd,0x4d,0x38,0xff,0xff,0x4f,0xff,0x51,0xff,0x4a,
+				0xff,0x4e,0xff,0xff,0x10,0x47,0x12,0x49,0x1d,0x9d,0x39,0xff,0x21,0xff,0x1e,0xff,
+				0x2c,0xff,0x30,0xff,0x13,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xf,0xff,0x1f,0xff,
+				0x33,0xff,0x34,0xff,0x23,0xff,0x14,0xff,0xff,0xff,0x0,0x0};
+			if (!memcmp(kconfig_settings[CONTROL_NONE], old_keyboard_defaults, MAX_CONTROLS))
+				memcpy(kconfig_settings[CONTROL_NONE], default_kconfig_settings[CONTROL_NONE],
+					   MAX_CONTROLS);
+		}
+		#endif
+
 		if (errno_ret==EZERO)	{
 			kc_set_controls();
 		}

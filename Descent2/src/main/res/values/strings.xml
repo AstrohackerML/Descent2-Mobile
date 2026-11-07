@@ -10,4 +10,8 @@
 	<string name="data_missing">These files were not found:\n%1$s</string>
 	<string name="data_failed">Copying failed: %1$s</string>
 	<string name="data_no_space">Not enough free space: %1$d MB needed</string>
+	<string name="controls_title">How will you play?</string>
+	<string name="controls_touch">Touch screen</string>
+	<string name="controls_keyboard_mouse">Keyboard and mouse</string>
+	<string name="controls_controller">Controller</string>
 </resources>

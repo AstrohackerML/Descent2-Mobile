@@ -2,9 +2,12 @@ package astrohacker.descent2;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -19,6 +22,9 @@ import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Display;
 import android.view.Gravity;
+import android.view.InputDevice;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
 import android.view.WindowManager;
@@ -41,6 +47,12 @@ import java.util.Locale;
  */
 public class DescentActivity extends Activity implements SensorEventListener {
 	private static final int PICK_DATA_FOLDER = 1;
+
+	// The ways to play, in the order chooseControls lists them; controls.c and
+	// input.c know them by these numbers
+	static final int CONTROLS_TOUCH = 0;
+	static final int CONTROLS_KEYBOARD_MOUSE = 1;
+	static final int CONTROLS_CONTROLLER = 2;
 
 	private DescentView descentView;
 	private MediaPlayer mediaPlayer;
@@ -103,7 +115,7 @@ public class DescentActivity extends Activity implements SensorEventListener {
 		// The game data files are not part of the app; ask for them if we don't have them yet
 		dataPath = GameData.findDataPath(this);
 		if (dataPath != null) {
-			startGame();
+			chooseControls();
 		} else {
 			showDataSetup();
 		}
@@ -116,9 +128,64 @@ public class DescentActivity extends Activity implements SensorEventListener {
 		return dataPath;
 	}
 
-	private void startGame() {
+	/**
+	 * Asks every launch how the player will play: the touch controls, the
+	 * keyboard and the mouse, or a game controller. What is plugged in only
+	 * picks the answer offered first.
+	 */
+	private void chooseControls() {
+		final int defaultChoice;
+		AlertDialog dialog;
+
+		if (haveController()) {
+			defaultChoice = CONTROLS_CONTROLLER;
+		} else if (getResources().getConfiguration().keyboard == Configuration.KEYBOARD_QWERTY) {
+			defaultChoice = CONTROLS_KEYBOARD_MOUSE;
+		} else {
+			defaultChoice = CONTROLS_TOUCH;
+		}
+		dialog = new AlertDialog.Builder(this)
+				.setTitle(R.string.controls_title)
+				.setSingleChoiceItems(new CharSequence[]{
+						getString(R.string.controls_touch),
+						getString(R.string.controls_keyboard_mouse),
+						getString(R.string.controls_controller)
+				}, defaultChoice, new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						dialog.dismiss();
+						startGame(which);
+					}
+				})
+				.setOnCancelListener(new DialogInterface.OnCancelListener() {
+					@Override
+					public void onCancel(DialogInterface dialog) {
+						startGame(defaultChoice);
+					}
+				})
+				.create();
+		dialog.show();
+
+		// A controller moves through the list from the answer offered first
+		dialog.getListView().setSelection(defaultChoice);
+		dialog.getListView().requestFocus();
+	}
+
+	private boolean haveController() {
+		for (int id : InputDevice.getDeviceIds()) {
+			InputDevice device = InputDevice.getDevice(id);
+			if (device != null && DescentView.isController(device.getSources())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void startGame(int controls) {
+		setControls(controls);
+
 		// Create OpenGL ES view
-		descentView = new DescentView(this);
+		descentView = new DescentView(this, controls);
 
 		// Set views
 		setContentView(descentView);
@@ -189,7 +256,7 @@ public class DescentActivity extends Activity implements SensorEventListener {
 	private void checkData() {
 		dataPath = GameData.findDataPath(this);
 		if (dataPath != null) {
-			startGame();
+			chooseControls();
 		} else {
 			File manualDir = GameData.manualDir(this);
 			List<String> missing = GameData.missingFiles(manualDir != null ? manualDir
@@ -281,6 +348,23 @@ public class DescentActivity extends Activity implements SensorEventListener {
 				});
 			}
 		}).start();
+	}
+
+	// The keys and the controller go to the game whichever view has the focus
+	@Override
+	public boolean dispatchKeyEvent(KeyEvent event) {
+		if (descentView != null && descentView.handleKey(event)) {
+			return true;
+		}
+		return super.dispatchKeyEvent(event);
+	}
+
+	@Override
+	public boolean dispatchGenericMotionEvent(MotionEvent event) {
+		if (descentView != null && descentView.handleGenericMotion(event)) {
+			return true;
+		}
+		return super.dispatchGenericMotionEvent(event);
 	}
 
 	@Override
@@ -497,6 +581,8 @@ public class DescentActivity extends Activity implements SensorEventListener {
 	}
 
 	private static native void descentPause();
+
+	private static native void setControls(int controls);
 
 	private static native boolean getUseGyroscope();
 

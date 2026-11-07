@@ -2129,6 +2129,9 @@ extern char IWasKicked;
 //editor mode or exit selected
 void game()
 {
+	// The touch controls show only while the game runs; the menus after it keep
+	// Game_mode, so the flag has to say we are out of the game
+	In_screen = false;
 	game_setup();								// Replaces what was here earlier.
 													// Good for Windows Sake.  
 
@@ -2236,6 +2239,7 @@ void game()
 	ProfilerSetStatus(0);
 #endif
 
+	In_screen = true;
 	digi_stop_all();
 
 	if ( (Newdemo_state == ND_STATE_RECORDING) || (Newdemo_state == ND_STATE_PAUSED) )

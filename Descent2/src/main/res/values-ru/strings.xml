@@ -9,4 +9,8 @@
 	<string name="data_missing">Не найдены файлы:\n%1$s</string>
 	<string name="data_failed">Ошибка копирования: %1$s</string>
 	<string name="data_no_space">Недостаточно места: нужно %1$d МБ</string>
+	<string name="controls_title">Как будете играть?</string>
+	<string name="controls_touch">Сенсорный экран</string>
+	<string name="controls_keyboard_mouse">Клавиатура и мышь</string>
+	<string name="controls_controller">Контроллер</string>
 </resources>
