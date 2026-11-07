@@ -203,7 +203,7 @@ public class DescentView extends SurfaceView implements KeyEvent.Callback, Surfa
 			controllerMoved(event);
 			return true;
 		}
-		if (!event.isFromSource(InputDevice.SOURCE_MOUSE)) {
+		if (!isMouse(event)) {
 			return false;
 		}
 		if (Build.VERSION.SDK_INT >= 23 && (action == MotionEvent.ACTION_BUTTON_PRESS
@@ -212,20 +212,34 @@ public class DescentView extends SurfaceView implements KeyEvent.Callback, Surfa
 			return true;
 		}
 		if (action == MotionEvent.ACTION_HOVER_MOVE && flying) {
-			if (Build.VERSION.SDK_INT >= 24) {
-				mouseMoved((int) event.getAxisValue(MotionEvent.AXIS_RELATIVE_X),
-						(int) event.getAxisValue(MotionEvent.AXIS_RELATIVE_Y));
-			} else {
-				// No relative axes before Android 7: the pointer stops at the edges
-				if (!Float.isNaN(lastMouseX)) {
-					mouseMoved((int) (event.getX() - lastMouseX), (int) (event.getY() - lastMouseY));
-				}
-				lastMouseX = event.getX();
-				lastMouseY = event.getY();
-			}
+			mouseSteers(event);
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Whether an event comes from a mouse. On the Shield Tablet (Android 6) a
+	 * mouse says it is a touch screen, only its tool type tells the truth.
+	 */
+	private static boolean isMouse(MotionEvent event) {
+		return event.isFromSource(InputDevice.SOURCE_MOUSE)
+				|| event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE;
+	}
+
+	// The mouse moved in flight, hovering or with a button held
+	private void mouseSteers(MotionEvent event) {
+		if (Build.VERSION.SDK_INT >= 24 && event.isFromSource(InputDevice.SOURCE_MOUSE)) {
+			mouseMoved((int) event.getAxisValue(MotionEvent.AXIS_RELATIVE_X),
+					(int) event.getAxisValue(MotionEvent.AXIS_RELATIVE_Y));
+			return;
+		}
+		// No relative axes: the pointer stops at the edges
+		if (!Float.isNaN(lastMouseX)) {
+			mouseMoved((int) (event.getX() - lastMouseX), (int) (event.getY() - lastMouseY));
+		}
+		lastMouseX = event.getX();
+		lastMouseY = event.getY();
 	}
 
 	private static float axis(MotionEvent event, int axis) {
@@ -330,10 +344,15 @@ public class DescentView extends SurfaceView implements KeyEvent.Callback, Surfa
 		boolean touchHandled = false;
 
 		// The mouse buttons come as their own events, see handleGenericMotion
-		if (Build.VERSION.SDK_INT >= 23 && event.isFromSource(InputDevice.SOURCE_MOUSE)) {
+		if (Build.VERSION.SDK_INT >= 23 && isMouse(event)) {
 			if (action == MotionEvent.ACTION_BUTTON_PRESS
 					|| action == MotionEvent.ACTION_BUTTON_RELEASE) {
 				mouseButton(event);
+			} else if (flying) {
+				// Firing while turning: a held button makes the moves touch moves
+				if (action == MotionEvent.ACTION_MOVE) {
+					mouseSteers(event);
+				}
 			} else {
 				mouseSetPos((short) event.getX(), (short) event.getY());
 			}

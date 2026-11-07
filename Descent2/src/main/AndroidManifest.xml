@@ -5,6 +5,10 @@
 	android:versionCode="1"
 	android:versionName="1.0">
 
+	<!-- Plays with a controller too; on a Shield this keeps the right stick from
+	     turning into a mouse pointer -->
+	<uses-feature android:name="android.hardware.gamepad" android:required="false" />
+
 	<application
 		android:allowBackup="false"
 		android:icon="@mipmap/ic_launcher"
